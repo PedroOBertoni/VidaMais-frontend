@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Vida+",
+    "slug": "vida-mais",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "vidamais",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": false
+        }
+      ]
+    ]
+  }
+}
