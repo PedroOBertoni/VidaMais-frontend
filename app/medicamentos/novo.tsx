@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { router } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { colors } from "../../src/constants/theme";
-import { inserirMedicamento } from "../../src/database/database";
+import { atualizarMedicamento, buscarMedicamento, inserirMedicamento } from "../../src/database/database";
 import { sincronizar } from "../../src/services/sync";
+import { converterDataParaISO, formatarData } from "../../src/types/medicamento";
 
 const campos = [
   ["laboratorio", "Laboratório"],
@@ -16,22 +17,49 @@ const campos = [
 ] as const;
 
 export default function NovoMedicamento() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const editando = Boolean(id);
   const [form, setForm] = useState({ nome:"", laboratorio:"", validade:"", indicacao:"", contraindicacoes:"", posologia:"", efeitos_adversos:"", precaucoes:"", observacoes:"" });
   const [salvando, setSalvando] = useState(false);
   const set = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
+  useEffect(() => {
+    if (!id) return;
+    buscarMedicamento(Number(id)).then(item => {
+      if (!item) {
+        Alert.alert("Medicamento não encontrado", "O registro solicitado não existe.", [{ text: "OK", onPress: () => router.back() }]);
+        return;
+      }
+      setForm({
+        nome: item.nome,
+        laboratorio: item.laboratorio,
+        validade: formatarData(item.validade),
+        indicacao: item.indicacao,
+        contraindicacoes: item.contraindicacoes,
+        posologia: item.posologia,
+        efeitos_adversos: item.efeitos_adversos,
+        precaucoes: item.precaucoes,
+        observacoes: item.observacoes,
+      });
+    }).catch(() => Alert.alert("Erro", "Não foi possível carregar o medicamento."));
+  }, [id]);
+
   async function salvar() {
-    if (!form.nome.trim() || !/^\\d{2}\\/\\d{2}\\/\\d{4}$/.test(form.validade)) {
-      Alert.alert("Dados incompletos", "Informe o nome e a validade no formato DD/MM/AAAA.");
+    const validade = converterDataParaISO(form.validade);
+    if (!form.nome.trim() || !validade) {
+      Alert.alert("Dados inválidos", "Informe o nome e uma data de validade válida no formato DD/MM/AAAA.");
       return;
     }
-    const [dia, mes, ano] = form.validade.split("/");
-    const validade = `${ano}-${mes}-${dia}`;
     setSalvando(true);
     try {
-      await inserirMedicamento({ ...form, nome: form.nome.trim(), validade });
-      await sincronizar();
-      Alert.alert("Sucesso", "Medicamento cadastrado com sucesso.", [{ text: "OK", onPress: () => router.back() }]);
+      const dados = { ...form, nome: form.nome.trim(), validade };
+      if (id) await atualizarMedicamento(Number(id), dados);
+      else await inserirMedicamento(dados);
+      const sync = await sincronizar();
+      const mensagem = sync.ok
+        ? `Medicamento ${editando ? "atualizado" : "cadastrado"} com sucesso.`
+        : `Medicamento salvo neste aparelho. Sincronização pendente: ${sync.message}`;
+      Alert.alert("Sucesso", mensagem, [{ text: "OK", onPress: () => router.back() }]);
     } catch {
       Alert.alert("Erro", "Não foi possível salvar o medicamento.");
     } finally { setSalvando(false); }
@@ -40,22 +68,23 @@ export default function NovoMedicamento() {
   return (
     <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>Cadastrar medicamento</Text>
+        <Stack.Screen options={{ title: editando ? "Editar medicamento" : "Novo medicamento" }} />
+        <Text style={styles.heading}>{editando ? "Editar medicamento" : "Cadastrar medicamento"}</Text>
         <Text style={styles.sub}>Preencha as informações para acompanhar a validade e a bula.</Text>
 
         <Text style={styles.label}>Nome do medicamento *</Text>
-        <TextInput value={form.nome} onChangeText={v=>set("nome",v)} placeholder="Ex.: Dipirona" style={styles.input} />
+        <TextInput accessibilityLabel="Nome do medicamento" value={form.nome} onChangeText={v=>set("nome",v)} placeholder="Ex.: Dipirona" style={styles.input} />
 
         <Text style={styles.label}>Data de validade *</Text>
-        <TextInput value={form.validade} onChangeText={v=>set("validade",v)} placeholder="DD/MM/AAAA" keyboardType="numeric" maxLength={10} style={styles.input} />
+        <TextInput accessibilityLabel="Data de validade" value={form.validade} onChangeText={v=>set("validade",v)} placeholder="DD/MM/AAAA" keyboardType="numeric" maxLength={10} style={styles.input} />
 
         {campos.map(([key, label]) => <View key={key}>
           <Text style={styles.label}>{label}</Text>
-          <TextInput value={form[key]} onChangeText={v=>set(key,v)} placeholder={`Informe ${label.toLowerCase()}`} style={[styles.input, styles.textarea]} multiline />
+          <TextInput accessibilityLabel={label} value={form[key]} onChangeText={v=>set(key,v)} placeholder={`Informe ${label.toLowerCase()}`} style={[styles.input, styles.textarea]} multiline />
         </View>)}
 
-        <Pressable disabled={salvando} style={[styles.button, salvando && { opacity:.6 }]} onPress={salvar}>
-          <Text style={styles.buttonText}>{salvando ? "Salvando..." : "Salvar medicamento"}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Salvar medicamento" disabled={salvando} style={[styles.button, salvando && { opacity:.6 }]} onPress={salvar}>
+          <Text style={styles.buttonText}>{salvando ? "Salvando..." : editando ? "Salvar alterações" : "Salvar medicamento"}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

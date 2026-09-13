@@ -8,7 +8,7 @@ import { useMedicamentos } from "../../src/hooks/useMedicamentos";
 import { getStatusValidade } from "../../src/types/medicamento";
 
 export default function Medicamentos() {
-  const { medicamentos, recarregar } = useMedicamentos();
+  const { medicamentos, erro, recarregar } = useMedicamentos();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<"todos" | "validos" | "proximos" | "vencidos">("todos");
 
@@ -27,9 +27,10 @@ export default function Medicamentos() {
   return (
     <View style={styles.screen}>
       <View style={styles.top}>
-        <TextInput value={busca} onChangeText={setBusca} placeholder="🔎  Buscar medicamento..." placeholderTextColor={colors.muted} style={styles.search} />
-        <Pressable style={styles.new} onPress={() => router.push("/medicamentos/novo")}><Text style={styles.newText}>＋</Text></Pressable>
+        <TextInput accessibilityLabel="Buscar medicamento" value={busca} onChangeText={setBusca} placeholder="🔎  Buscar medicamento..." placeholderTextColor={colors.muted} style={styles.search} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Cadastrar medicamento" style={styles.new} onPress={() => router.push("/medicamentos/novo")}><Text style={styles.newText}>＋</Text></Pressable>
       </View>
+      {!!erro && <Pressable accessibilityRole="button" onPress={recarregar} style={styles.errorBox}><Text style={styles.errorText}>{erro} Toque para tentar novamente.</Text></Pressable>}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         {[
           ["todos", "Todos"], ["validos", "Válidos"], ["proximos", "Vencendo"], ["vencidos", "Vencidos"]
@@ -53,4 +54,6 @@ const styles = StyleSheet.create({
   chipText: { color: colors.muted, fontWeight: "700", fontSize: 12 },
   chipTextActive: { color: "white" },
   list: { padding: 16, paddingTop: 4, paddingBottom: 30 },
+  errorBox: { backgroundColor: colors.dangerBg, borderRadius: 12, padding: 12, marginHorizontal: 16, marginBottom: 10 },
+  errorText: { color: colors.danger, textAlign: "center", fontWeight: "700" },
 });

@@ -1,23 +1,33 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { colors } from "../../src/constants/theme";
 import { buscarMedicamento, excluirMedicamento } from "../../src/database/database";
 import { diasRestantes, formatarData, getStatusValidade, Medicamento } from "../../src/types/medicamento";
 import { StatusBadge } from "../../src/components/StatusBadge";
+import { sincronizar } from "../../src/services/sync";
 
 export default function Detalhes() {
   const { id } = useLocalSearchParams<{id:string}>();
-  const [item, setItem] = useState<Medicamento | null>(null);
-  const carregar = useCallback(async()=>setItem(await buscarMedicamento(Number(id))),[id]);
-  useEffect(()=>{carregar()},[carregar]);
+  const [item, setItem] = useState<Medicamento | null | undefined>(undefined);
+  const [erro, setErro] = useState(false);
+  const carregar = useCallback(async()=>{
+    setErro(false);
+    try { setItem(await buscarMedicamento(Number(id))); }
+    catch { setErro(true); }
+  },[id]);
   useFocusEffect(useCallback(()=>{carregar()},[carregar]));
 
-  if (!item) return <View style={styles.center}><Text>Carregando...</Text></View>;
+  if (erro) return <View style={styles.center}><Text>Não foi possível carregar o medicamento.</Text><Pressable onPress={carregar}><Text style={styles.link}>Tentar novamente</Text></Pressable></View>;
+  if (item === undefined) return <View style={styles.center}><Text>Carregando...</Text></View>;
+  if (item === null) return <View style={styles.center}><Text>Medicamento não encontrado.</Text></View>;
   const status=getStatusValidade(item.validade), dias=diasRestantes(item.validade);
 
   const excluir=()=>Alert.alert("Excluir medicamento", "Deseja realmente excluir este medicamento?", [
-    {text:"Cancelar",style:"cancel"}, {text:"Excluir",style:"destructive",onPress:async()=>{await excluirMedicamento(item.id);router.back();}}
+    {text:"Cancelar",style:"cancel"}, {text:"Excluir",style:"destructive",onPress:async()=>{
+      try { await excluirMedicamento(item.id); await sincronizar(); router.back(); }
+      catch { Alert.alert("Erro", "Não foi possível excluir o medicamento."); }
+    }}
   ]);
 
   const sec=[["Indicação",item.indicacao],["Contraindicações",item.contraindicacoes],["Posologia",item.posologia],["Efeitos adversos",item.efeitos_adversos],["Precauções",item.precaucoes],["Observações",item.observacoes]];
@@ -26,11 +36,11 @@ export default function Detalhes() {
     <View style={styles.hero}><View style={styles.bigIcon}><Text style={{fontSize:35}}>💊</Text></View><Text style={styles.name}>{item.nome}</Text>{!!item.laboratorio&&<Text style={styles.lab}>{item.laboratorio}</Text>}<StatusBadge status={status}/></View>
     <View style={styles.validity}><Text style={styles.validityLabel}>VALIDADE</Text><Text style={styles.date}>{formatarData(item.validade)}</Text><Text style={styles.days}>{status==="vencido"?`Vencido há ${Math.abs(dias)} dia(s)`: `${dias} dia(s) restantes`}</Text></View>
     {sec.map(([title,text])=>text?<View key={title} style={styles.section}><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.body}>{text}</Text></View>:null)}
-    <View style={styles.actions}><Pressable style={styles.primary} onPress={()=>router.push(`/bula/${item.id}`)}><Text style={styles.primaryText}>📖  Ver bula</Text></Pressable><Pressable style={styles.secondary} onPress={()=>Alert.alert("Edição","Para esta versão, altere o cadastro criando uma nova versão do registro.")}><Text style={styles.secondaryText}>Editar</Text></Pressable><Pressable style={styles.delete} onPress={excluir}><Text style={styles.deleteText}>Excluir</Text></Pressable></View>
+    <View style={styles.actions}><Pressable accessibilityRole="button" accessibilityLabel="Ver bula" style={styles.primary} onPress={()=>router.push(`/bula/${item.id}`)}><Text style={styles.primaryText}>📖  Ver bula</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Editar medicamento" style={styles.secondary} onPress={()=>router.push(`/medicamentos/novo?id=${item.id}`)}><Text style={styles.secondaryText}>Editar</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Excluir medicamento" style={styles.delete} onPress={excluir}><Text style={styles.deleteText}>Excluir</Text></Pressable></View>
   </ScrollView>;
 }
 const styles=StyleSheet.create({
- screen:{flex:1,backgroundColor:colors.background},content:{padding:20,paddingBottom:40},center:{flex:1,alignItems:"center",justifyContent:"center"},
+ screen:{flex:1,backgroundColor:colors.background},content:{padding:20,paddingBottom:40},center:{flex:1,alignItems:"center",justifyContent:"center",padding:20},link:{color:colors.primary,fontWeight:"800",marginTop:12},
  hero:{alignItems:"center",backgroundColor:colors.card,borderRadius:20,padding:22,borderWidth:1,borderColor:colors.border},
  bigIcon:{width:72,height:72,borderRadius:22,backgroundColor:colors.primaryLight,alignItems:"center",justifyContent:"center",marginBottom:10},
  name:{fontSize:23,fontWeight:"900",color:colors.text,textAlign:"center"},lab:{color:colors.muted,marginTop:3,marginBottom:10},

@@ -7,7 +7,7 @@ import { useMedicamentos } from "../src/hooks/useMedicamentos";
 import { getStatusValidade } from "../src/types/medicamento";
 
 export default function Home() {
-  const { medicamentos, loading, recarregar } = useMedicamentos();
+  const { medicamentos, loading, erro, recarregar } = useMedicamentos();
 
   useFocusEffect(useCallback(() => { recarregar(); }, [recarregar]));
 
@@ -33,7 +33,11 @@ export default function Home() {
         <View style={styles.stat}><Text style={[styles.number, { color: colors.danger }]}>{vencidos}</Text><Text style={styles.label}>Vencidos</Text></View>
       </View>
 
-      <Pressable style={styles.add} onPress={() => router.push("/medicamentos/novo")}>
+      {!!erro && <Pressable accessibilityRole="button" onPress={recarregar} style={styles.errorBox}>
+        <Text style={styles.errorText}>{erro} Toque para tentar novamente.</Text>
+      </Pressable>}
+
+      <Pressable accessibilityRole="button" accessibilityLabel="Cadastrar medicamento" style={styles.add} onPress={() => router.push("/medicamentos/novo")}>
         <Text style={styles.addPlus}>＋</Text>
         <View><Text style={styles.addTitle}>Cadastrar medicamento</Text><Text style={styles.addSub}>Adicione um novo remédio ao Vida+</Text></View>
       </Pressable>
@@ -84,4 +88,6 @@ const styles = StyleSheet.create({
   info: { backgroundColor: colors.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border },
   infoTitle: { color: colors.text, fontWeight: "800" },
   infoText: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 5 },
+  errorBox: { backgroundColor: colors.dangerBg, borderRadius: 12, padding: 12, marginBottom: 14 },
+  errorText: { color: colors.danger, textAlign: "center", fontWeight: "700" },
 });

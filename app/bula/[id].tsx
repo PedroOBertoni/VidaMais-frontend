@@ -7,9 +7,15 @@ import { Medicamento } from "../../src/types/medicamento";
 
 export default function Bula() {
   const { id } = useLocalSearchParams<{id:string}>();
-  const [item,setItem]=useState<Medicamento|null>(null);
-  useEffect(()=>{buscarMedicamento(Number(id)).then(setItem)},[id]);
-  if(!item)return <View style={styles.center}><Text>Carregando...</Text></View>;
+  const [item,setItem]=useState<Medicamento|null|undefined>(undefined);
+  const [erro,setErro]=useState(false);
+  useEffect(()=>{
+    setErro(false);
+    buscarMedicamento(Number(id)).then(setItem).catch(()=>setErro(true));
+  },[id]);
+  if(erro)return <View style={styles.center}><Text>Não foi possível carregar a bula.</Text></View>;
+  if(item===undefined)return <View style={styles.center}><Text>Carregando...</Text></View>;
+  if(item===null)return <View style={styles.center}><Text>Medicamento não encontrado.</Text></View>;
   const secoes=[["Indicação",item.indicacao],["Contraindicações",item.contraindicacoes],["Posologia",item.posologia],["Efeitos adversos",item.efeitos_adversos],["Precauções",item.precaucoes],["Observações",item.observacoes]];
   return <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
     <View style={styles.header}><Text style={styles.icon}>📖</Text><Text style={styles.title}>Bula — {item.nome}</Text><Text style={styles.note}>Informações cadastradas no Vida+</Text></View>

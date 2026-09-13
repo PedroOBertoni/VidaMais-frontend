@@ -1,5 +1,6 @@
 export type Medicamento = {
   id: number;
+  sync_id: string;
   nome: string;
   laboratorio: string;
   validade: string;
@@ -14,7 +15,7 @@ export type Medicamento = {
   updated_at?: string;
 };
 
-export type MedicamentoInput = Omit<Medicamento, "id" | "sincronizado" | "created_at" | "updated_at">;
+export type MedicamentoInput = Omit<Medicamento, "id" | "sync_id" | "sincronizado" | "created_at" | "updated_at">;
 
 export type StatusValidade = "vencido" | "proximo" | "valido";
 
@@ -39,4 +40,19 @@ export function diasRestantes(validade: string) {
 export function formatarData(data: string) {
   const [ano, mes, dia] = data.split("-");
   return `${dia}/${mes}/${ano}`;
+}
+
+export function converterDataParaISO(data: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(data);
+  if (!match) return null;
+
+  const [, dia, mes, ano] = match;
+  const dataValidada = new Date(Number(ano), Number(mes) - 1, Number(dia));
+  if (
+    dataValidada.getFullYear() !== Number(ano) ||
+    dataValidada.getMonth() !== Number(mes) - 1 ||
+    dataValidada.getDate() !== Number(dia)
+  ) return null;
+
+  return `${ano}-${mes}-${dia}`;
 }

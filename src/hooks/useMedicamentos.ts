@@ -1,19 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { initDatabase, listarMedicamentos } from "../database/database";
 import { Medicamento } from "../types/medicamento";
 
 export function useMedicamentos() {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    await initDatabase();
-    setMedicamentos(await listarMedicamentos());
-    setLoading(false);
+    setErro(null);
+    try {
+      await initDatabase();
+      setMedicamentos(await listarMedicamentos());
+    } catch {
+      setErro("Não foi possível carregar os medicamentos.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { carregar(); }, [carregar]);
-
-  return { medicamentos, loading, recarregar: carregar };
+  return { medicamentos, loading, erro, recarregar: carregar };
 }

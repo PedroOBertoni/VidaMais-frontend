@@ -6,6 +6,12 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "vidamais",
+    "ios": {
+      "bundleIdentifier": "br.com.vidamais.app"
+    },
+    "android": {
+      "package": "br.com.vidamais.app"
+    },
     "plugins": [
       "expo-router",
       [

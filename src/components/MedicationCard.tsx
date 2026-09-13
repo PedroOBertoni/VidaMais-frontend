@@ -8,7 +8,7 @@ export function MedicationCard({ item, onPress }: { item: Medicamento; onPress: 
   const dias = diasRestantes(item.validade);
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Abrir ${item.nome}`} onPress={onPress} style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}>
       <View style={styles.row}>
         <View style={styles.icon}><Text style={styles.iconText}>💊</Text></View>
         <View style={{ flex: 1 }}>
